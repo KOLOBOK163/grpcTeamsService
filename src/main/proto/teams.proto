@@ -1,0 +1,274 @@
+syntax = "proto3";
+
+package com.guildhub.teams_service;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+option java_package = "com.guildhub.teams_service.grpc";
+option java_outer_classname = "TeamsServiceProto";
+
+enum MatchStatus {
+  PENDING = 0;
+  IN_PROGRESS = 1;
+  COMPLETED = 2;
+  CANCELLED = 3;
+}
+
+enum PlayerRole {
+  PLAYER = 0;
+  TEAM_LEADER = 1;
+  COACH = 2;
+}
+
+message ImageUpload {
+  bytes image_data = 1;
+  string image_filename = 2;
+  string image_content_type = 3;
+}
+
+message PlayerCardLight {
+  int64 id = 1;
+  string nickname = 2;
+  string avatar_url = 3;
+  int32 hltv_rating = 4;
+  PlayerRole role = 5;
+  string country = 6;
+}
+
+message TeamLight {
+  int64 id = 1;
+  string name = 2;
+  string logo_url = 3;
+  string country = 4;
+  int32 hltv_rating = 5;
+}
+
+message Achievement {
+  int64 id = 1;
+  string name = 2;
+  int32 place = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message Trophy {
+  int64 id = 1;
+  string name = 2;
+  string logo_url = 3;
+  int32 place = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message MapStats {
+  int64 id = 1;
+  string map_name = 2;
+  int32 wins = 3;
+  int32 losses = 4;
+  int32 win_percentage = 5;
+}
+
+message MatchResult {
+  int64 id = 1;
+  int64 opponent_id = 2;
+  string opponent_name = 3;
+  string opponent_logo_url = 4;
+  string map_name = 5;
+  int32 team_score = 6;
+  int32 opponent_score = 7;
+  bool is_win = 8;
+  MatchStatus status = 9;
+  google.protobuf.Timestamp match_date = 10;
+  string tournament_name = 11;
+}
+
+message PlayerCardStats {
+  int64 id = 1;
+  int32 firepower = 2;
+  int32 entrying = 3;
+  int32 trading = 4;
+  int32 opening = 5;
+  int32 clutching = 6;
+  int32 sniping = 7;
+  int32 utility = 8;
+}
+
+message TeamStats {
+  int64 id = 1;
+  repeated MapStats map_stats = 2;
+  repeated MatchResult recent_matches = 3;
+  int32 total_wins = 4;
+  int32 total_losses = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message PlayerCard {
+  int64 id = 1;
+  string nickname = 2;
+  string full_name = 3;
+  string avatar_url = 4;
+  int32 hltv_rating = 5;
+  int32 age = 6;
+  int32 prize_money = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  string faceit_url = 10;
+  string country = 11;
+  PlayerRole role = 12;
+  PlayerCardStats stats = 13;
+
+  repeated Trophy trophies = 14;
+  repeated Achievement achievements = 15;
+
+  repeated TeamLight teams = 16;
+}
+
+message Team {
+  int64 id = 1;
+  string name = 2;
+  string logo_url = 3;
+  int32 prizes = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  int32 hltv_rating = 7;
+  string country = 8;
+
+  repeated PlayerCardLight players = 9;
+
+  repeated Achievement achievements = 10;
+  TeamStats stats = 11;
+}
+
+
+message TeamsList {
+  repeated TeamLight teams = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message PlayersList {
+  repeated PlayerCardLight players = 1;
+  int32 total_count = 2;
+}
+
+message AchievementsList {
+  repeated Achievement achievements = 1;
+}
+
+message TrophiesList {
+  repeated Trophy trophies = 1;
+}
+
+message CreateTeamRequest {
+  string name = 1;
+  string country = 2;
+  ImageUpload logo = 3;
+}
+
+message UpdateTeamRequest {
+  int64 team_id = 1;
+  string name = 2;
+  string country = 3;
+  ImageUpload logo = 4;
+}
+
+message GetTeamRequest {
+  int64 team_id = 1;
+  bool include_stats = 2;
+  bool include_achievements = 3;
+}
+
+message ListTeamsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string country = 3;
+  int32 min_rating = 4;
+}
+
+message CreatePlayerRequest {
+  string nickname = 1;
+  string full_name = 2;
+  int32 age = 3;
+  string country = 4;
+  PlayerRole role = 5;
+  ImageUpload avatar = 6;
+}
+
+message UpdatePlayerRequest {
+  int64 player_id = 1;
+  string nickname = 2;
+  string full_name = 3;
+  int32 age = 4;
+  string country = 5;
+  PlayerRole role = 6;
+}
+
+message UpdatePlayerAvatarRequest {
+  int64 player_id = 1;
+  ImageUpload avatar = 2;
+}
+
+message GetPlayerRequest {
+  int64 player_id = 1;
+  bool include_stats = 2;
+  bool include_trophies = 3;
+  bool include_achievements = 4;
+}
+
+message AddPlayerToTeamRequest {
+  int64 team_id = 1;
+  int64 player_id = 2;
+  PlayerRole role = 3;
+}
+
+message RemovePlayerFromTeamRequest {
+  int64 team_id = 1;
+  int64 player_id = 2;
+}
+
+message UpdateTeamStatsRequest {
+  int64 team_id = 1;
+  repeated MapStats map_stats = 2;
+  int32 total_wins = 3;
+  int32 total_losses = 4;
+}
+
+message AddMatchResultRequest {
+  int64 team_id = 1;
+  int64 opponent_id = 2;
+  string opponent_name = 3;
+  string opponent_logo_url = 4;
+  string map_name = 5;
+  int32 team_score = 6;
+  int32 opponent_score = 7;
+  google.protobuf.Timestamp match_date = 8;
+  string tournament_name = 9;
+}
+
+service TeamService {
+  rpc CreateTeam (CreateTeamRequest) returns (Team);
+  rpc GetTeam (GetTeamRequest) returns (Team);
+  rpc UpdateTeam (UpdateTeamRequest) returns (Team);
+  rpc DeleteTeam (GetTeamRequest) returns (google.protobuf.Empty);
+  rpc ListTeams (ListTeamsRequest) returns (TeamsList);
+
+  rpc CreatePlayer (CreatePlayerRequest) returns (PlayerCard);
+  rpc GetPlayer (GetPlayerRequest) returns (PlayerCard);
+  rpc UpdatePlayer (UpdatePlayerRequest) returns (PlayerCard);
+  rpc UpdatePlayerAvatar (UpdatePlayerAvatarRequest) returns (PlayerCard);
+  rpc DeletePlayer (GetPlayerRequest) returns (google.protobuf.Empty);
+
+  rpc AddPlayerToTeam (AddPlayerToTeamRequest) returns (Team);
+  rpc RemovePlayerFromTeam (RemovePlayerFromTeamRequest) returns (Team);
+
+  rpc GetTeamStats (GetTeamRequest) returns (TeamStats);
+  rpc UpdateTeamStats (UpdateTeamStatsRequest) returns (TeamStats);
+  rpc AddMatchResult (AddMatchResultRequest) returns (MatchResult);
+
+  rpc GetTeamAchievements (GetTeamRequest) returns (AchievementsList);
+  rpc GetPlayerAchievements (GetPlayerRequest) returns (AchievementsList);
+  rpc GetPlayerTrophies (GetPlayerRequest) returns (TrophiesList);
+}
