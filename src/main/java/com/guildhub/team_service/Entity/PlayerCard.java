@@ -32,8 +32,6 @@ public class PlayerCard {
 
     private int prizeMoney;
 
-    // Убрали ManyToMany связь, оставили только в Team для избежания цикличности
-
     @Column(name = "created_at")
     private Instant createdAt;
 
@@ -44,11 +42,15 @@ public class PlayerCard {
 
     private String country;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "player_card_teams", joinColumns = {@JoinColumn(name = "player_card_id")}, inverseJoinColumns = @JoinColumn(name = "team_id"))
+    private List<Team> teams = new ArrayList<>();
+
     @OneToMany(mappedBy = "playerCard", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     private List<Trophy> trophies = new ArrayList<>();
 
     @OneToMany(mappedBy = "playerCard", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
-    private List<Acheivement> achievements = new ArrayList<>();
+    private List<Achievement> achievements = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "player_card_stats_id")

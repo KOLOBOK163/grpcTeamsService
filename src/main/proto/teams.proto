@@ -31,10 +31,10 @@ message ImageUpload {
 message PlayerCardLight {
   int64 id = 1;
   string nickname = 2;
-  string avatar_url = 3;
-  int32 hltv_rating = 4;
-  PlayerRole role = 5;
-  string country = 6;
+  string full_name = 3;
+  string avatar_url = 4;
+  PlayerRole role = 6;
+  string country = 7;
 }
 
 message TeamLight {
@@ -42,7 +42,7 @@ message TeamLight {
   string name = 2;
   string logo_url = 3;
   string country = 4;
-  int32 hltv_rating = 5;
+  repeated PlayerCardLight players = 5;
 }
 
 message Achievement {

@@ -4,6 +4,7 @@ import com.google.protobuf.Empty;
 import com.guildhub.team_service.Entity.*;
 import com.guildhub.team_service.Entity.PlayerCard;
 import com.guildhub.team_service.Entity.Team;
+import com.guildhub.team_service.Mapper.ProtoMapper;
 import com.guildhub.team_service.Repository.PlayerCardRepository;
 import com.guildhub.team_service.Repository.TeamRepository;
 import com.guildhub.teams_service.grpc.*;
@@ -12,7 +13,6 @@ import com.guildhub.teams_service.grpc.TeamStats;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import jakarta.persistence.EntityExistsException;
-import jakarta.persistence.EntityNotFoundException;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 
@@ -23,9 +23,13 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
 
     private final TeamRepository teamRepository;
 
-    public TeamsGrpcService(PlayerCardRepository playerCardRepository, TeamRepository teamRepository) {
+    private final ProtoMapper protoMapper;
+
+    public TeamsGrpcService(PlayerCardRepository playerCardRepository, TeamRepository teamRepository
+           , ProtoMapper protoMapper) {
         this.playerCardRepository = playerCardRepository;
         this.teamRepository = teamRepository;
+        this.protoMapper = protoMapper;
     }
 
     @Override
@@ -71,7 +75,7 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
 
             if(player.getAchievements() != null)
             {
-                player.getAchievements().forEach(achievement -> listBuilder.addAchievements(protoMapper.toProtoAcheivement(achievement)));
+                player.getAchievements().forEach(achievement -> listBuilder.addAchievements(protoMapper.toProtoAchievement(achievement)));
             }
 
             responseObserver.onNext(listBuilder.build());
@@ -100,7 +104,7 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
             AchievementsList.Builder listBuilder = AchievementsList.newBuilder();
 
             if(team.getAchievements() != null){
-                team.getAchievements().forEach(achievement -> listBuilder.addAchievements(protoMapper.toProtoAchivement(achievement)));
+                team.getAchievements().forEach(achievement -> listBuilder.addAchievements(protoMapper.toProtoAchievement(achievement)));
             }
 
             responseObserver.onNext(listBuilder.build());
@@ -126,7 +130,7 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
                             .withDescription("Team with id " + request.getTeamId() + " not found")
                             .asRuntimeException());
 
-            com.guildhub.team_service.Entity.TeamStats stats = team.getTeamStats().get(0);
+            com.guildhub.team_service.Entity.TeamStats stats = team.getTeamStats().getFirst();
 
             TeamStats protoStats = protoMapper.toProtoTeamStats(stats);
 
@@ -171,5 +175,70 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
 
         responseObserver.onNext(protoTeam);
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getTeam(GetTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
+        super.getTeam(request, responseObserver);
+    }
+
+    @Override
+    public void updateTeam(UpdateTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
+        super.updateTeam(request, responseObserver);
+    }
+
+    @Override
+    public void deleteTeam(GetTeamRequest request, StreamObserver<Empty> responseObserver) {
+        super.deleteTeam(request, responseObserver);
+    }
+
+    @Override
+    public void listTeams(ListTeamsRequest request, StreamObserver<TeamsList> responseObserver) {
+        super.listTeams(request, responseObserver);
+    }
+
+    @Override
+    public void createPlayer(CreatePlayerRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
+        super.createPlayer(request, responseObserver);
+    }
+
+    @Override
+    public void getPlayer(GetPlayerRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
+        super.getPlayer(request, responseObserver);
+    }
+
+    @Override
+    public void updatePlayer(UpdatePlayerRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
+        super.updatePlayer(request, responseObserver);
+    }
+
+    @Override
+    public void updatePlayerAvatar(UpdatePlayerAvatarRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
+        super.updatePlayerAvatar(request, responseObserver);
+    }
+
+    @Override
+    public void deletePlayer(GetPlayerRequest request, StreamObserver<Empty> responseObserver) {
+        super.deletePlayer(request, responseObserver);
+    }
+
+    @Override
+    public void addPlayerToTeam(AddPlayerToTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
+        super.addPlayerToTeam(request, responseObserver);
+    }
+
+    @Override
+    public void removePlayerFromTeam(RemovePlayerFromTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
+        super.removePlayerFromTeam(request, responseObserver);
+    }
+
+    @Override
+    public void updateTeamStats(UpdateTeamStatsRequest request, StreamObserver<TeamStats> responseObserver) {
+        super.updateTeamStats(request, responseObserver);
+    }
+
+    @Override
+    public void addMatchResult(AddMatchResultRequest request, StreamObserver<MatchResult> responseObserver) {
+        super.addMatchResult(request, responseObserver);
     }
 }

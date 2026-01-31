@@ -43,7 +43,7 @@ public class Team {
     private int hltvRating;
 
     @OneToMany(mappedBy = "team", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
-    private List<Acheivement> achievements = new ArrayList<>();
+    private List<Achievement> achievements = new ArrayList<>();
 
     @OneToMany(mappedBy = "team", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     private List<TeamStats> teamStats = new ArrayList<>();

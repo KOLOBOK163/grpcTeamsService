@@ -12,7 +12,7 @@ import java.time.Instant;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Acheivement {
+public class Achievement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
