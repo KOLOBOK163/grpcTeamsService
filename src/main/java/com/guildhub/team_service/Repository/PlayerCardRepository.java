@@ -14,5 +14,6 @@ public interface PlayerCardRepository extends JpaRepository<PlayerCard, Long> {
     @Query("SELECT p FROM PlayerCard p LEFT JOIN FETCH p.achievements WHERE p.id = :id")
     Optional<PlayerCard> findByIdWithAchievements(Long id);
 
+    boolean existsByNickName(String nickName);
 
 }

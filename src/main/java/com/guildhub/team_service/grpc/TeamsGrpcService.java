@@ -4,6 +4,7 @@ import com.google.protobuf.Empty;
 import com.guildhub.team_service.Entity.*;
 import com.guildhub.team_service.Entity.PlayerCard;
 import com.guildhub.team_service.Entity.Team;
+import com.guildhub.team_service.Entity.enums.PlayerRole;
 import com.guildhub.team_service.Mapper.ProtoMapper;
 import com.guildhub.team_service.Repository.PlayerCardRepository;
 import com.guildhub.team_service.Repository.TeamRepository;
@@ -13,7 +14,13 @@ import com.guildhub.teams_service.grpc.TeamStats;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import jakarta.persistence.EntityExistsException;
+import jakarta.persistence.EntityNotFoundException;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
+import java.util.List;
 
 
 @GrpcService
@@ -179,37 +186,191 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
 
     @Override
     public void getTeam(GetTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
-        super.getTeam(request, responseObserver);
+        try{
+            Team team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new EntityNotFoundException("Team with id " + request.getTeamId() + "not found"));
+
+            com.guildhub.teams_service.grpc.Team teamProto = protoMapper.toProtoTeam(team);
+
+            responseObserver.onNext(teamProto);
+            responseObserver.onCompleted();
+        }catch (io.grpc.StatusRuntimeException e)
+        {
+            responseObserver.onError(e);
+        }catch (Exception e)
+        {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription("Error retrieving player trophies: " + e.getMessage())
+                            .asRuntimeException()
+            );
+        }
     }
 
     @Override
     public void updateTeam(UpdateTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
-        super.updateTeam(request, responseObserver);
+        try{
+            Team team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new EntityNotFoundException("Entity with id " + request.getTeamId() + "not found"));
+
+            String newName = request.getName();
+            if(!team.getName().equals(newName) && teamRepository.existByName(newName))
+            {
+                responseObserver.onError(
+                        Status.ALREADY_EXISTS
+                                .withDescription("News with title '" + newName + "' already exists")
+                                .asRuntimeException()
+                );
+                return;
+            }
+
+            ImageUpload logo = ImageUpload.newBuilder()
+                    .setImageData(request.getLogo().getImageData())
+                    .setImageFilename(request.getLogo().getImageFilename())
+                    .setImageContentType(request.getLogo().getImageContentType())
+                    .build();
+
+            team.setName(newName);
+            team.setCountry(request.getCountry());
+            team.setLogoUrl(String.valueOf(logo));
+
+            Team updatedTeam = teamRepository.save(team);
+
+            responseObserver.onNext(protoMapper.toProtoTeam(updatedTeam));
+            responseObserver.onCompleted();
+
+        }catch (io.grpc.StatusRuntimeException e)
+        {
+            responseObserver.onError(e);
+        }catch (Exception e)
+        {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription("Error retrieving player trophies: " + e.getMessage())
+                            .asRuntimeException()
+            );
+        }
     }
 
     @Override
     public void deleteTeam(GetTeamRequest request, StreamObserver<Empty> responseObserver) {
-        super.deleteTeam(request, responseObserver);
+        Long teamId = request.getTeamId();
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Entity with id " + teamId + "not found"));
+
+        if (team == null) {
+            responseObserver.onError(
+                    Status.NOT_FOUND
+                            .withDescription("News not found with id: " + teamId)
+                            .asRuntimeException()
+            );
+            return;
+        }
+
+        teamRepository.delete(team);
+
+        responseObserver.onNext(Empty.newBuilder().build());
+        responseObserver.onCompleted();
     }
 
     @Override
     public void listTeams(ListTeamsRequest request, StreamObserver<TeamsList> responseObserver) {
-        super.listTeams(request, responseObserver);
+        int pageNumber = Math.max(0, request.getPage());
+        int pageSize = Math.min(request.getPageSize() > 0 ? request.getPageSize() : 10,
+                50);
+
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Team> page = teamRepository.findAllByOrderByCreatedAtDesc(pageRequest);
+
+        List<TeamLight> teamList = page.getContent().stream()
+                .map(protoMapper::toProtoTeamLight)
+                .toList();
+
+        TeamsList response = TeamsList.newBuilder()
+                .addAllTeams(teamList)
+                .setTotalCount((int) page.getTotalElements())
+                .setPage(pageNumber)
+                .setPageSize(pageSize)
+                .build();
+
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void createPlayer(CreatePlayerRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
-        super.createPlayer(request, responseObserver);
+
+        if(playerCardRepository.existsByNickName(request.getNickname()))
+        {
+            throw new EntityExistsException("Player with nickname: " + request.getNickname() + "already exists");
+        }
+
+        ImageUpload avatar = ImageUpload.newBuilder()
+                .setImageData(request.getAvatar().getImageData())
+                .setImageFilename(request.getAvatar().getImageFilename())
+                .setImageContentType(request.getAvatar().getImageContentType())
+                .build();
+
+        PlayerRole role = protoMapper.fromProtoPlayerRole(request.getRole());
+
+        PlayerCard player = PlayerCard.builder()
+                .nickName(request.getNickname())
+                .fullName(request.getFullName())
+                .age(request.getAge())
+                .country(request.getCountry())
+                .role(role)
+                .avatarUrl(null)
+                .build();
+
+        PlayerCard savedPlayer = playerCardRepository.save(player);
+        com.guildhub.teams_service.grpc.PlayerCard playerProto = protoMapper.toProtoPlayerCard(savedPlayer);
+
+        responseObserver.onNext(playerProto);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void getPlayer(GetPlayerRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
-        super.getPlayer(request, responseObserver);
+        Long id = request.getPlayerId();
+
+        PlayerCard player = playerCardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Player with id: " + id + "not found"));
+
+        com.guildhub.teams_service.grpc.PlayerCard playerProto = protoMapper.toProtoPlayerCard(player);
+
+        responseObserver.onNext(playerProto);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void updatePlayer(UpdatePlayerRequest request, StreamObserver<com.guildhub.teams_service.grpc.PlayerCard> responseObserver) {
-        super.updatePlayer(request, responseObserver);
+        PlayerCard player = playerCardRepository.findById(request.getPlayerId())
+                .orElseThrow(() -> new EntityNotFoundException("Entity with id " + request.getPlayerId() + "not found"));
+
+        String newNickname = request.getNickname();
+        if(!player.getNickName().equals(newNickname) && playerCardRepository.existsByNickName(newNickname))
+        {
+            responseObserver.onError(
+                    Status.ALREADY_EXISTS
+                            .withDescription("News with title '" + newNickname + "' already exists")
+                            .asRuntimeException()
+            );
+            return;
+        }
+
+        PlayerRole role = protoMapper.fromProtoPlayerRole(request.getRole());
+
+        player.setNickName(newNickname);
+        player.setFullName(request.getFullName());
+        player.setAge(request.getAge());
+        player.setCountry(request.getCountry());
+        player.setRole(role);
+
+        PlayerCard updatedPlayer = playerCardRepository.save(player);
+
+        responseObserver.onNext(protoMapper.toProtoPlayerCard(updatedPlayer));
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -219,12 +380,32 @@ public class TeamsGrpcService extends TeamServiceGrpc.TeamServiceImplBase {
 
     @Override
     public void deletePlayer(GetPlayerRequest request, StreamObserver<Empty> responseObserver) {
-        super.deletePlayer(request, responseObserver);
+        Long id = request.getPlayerId();
+        PlayerCard playerCard = playerCardRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Player with id: " + id + "not found"));
+
+        playerCardRepository.delete(playerCard);
     }
 
     @Override
     public void addPlayerToTeam(AddPlayerToTeamRequest request, StreamObserver<com.guildhub.teams_service.grpc.Team> responseObserver) {
-        super.addPlayerToTeam(request, responseObserver);
+        Long playerId = request.getPlayerId();
+        Long teamId = request.getTeamId();
+
+        if(playerId != null && teamId != null)
+        {
+            throw new IllegalArgumentException("Player Id and Team Id must be not null");
+        }
+
+        PlayerCard player = playerCardRepository.findById(playerId)
+                .orElseThrow(() -> new EntityNotFoundException("Player with id: " + playerId + "not found"));
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team with id: " + teamId + "not found"));
+
+        if (team.getPlayers().stream().anyMatch(p -> playerId.equals(p.getId()))) {
+            throw new IllegalArgumentException("Player with id " + playerId + " is already in team " + teamId);
+        }
     }
 
     @Override

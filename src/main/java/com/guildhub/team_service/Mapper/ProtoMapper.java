@@ -6,8 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.util.Map;
-
 @Component
 @RequiredArgsConstructor
 public class ProtoMapper {
